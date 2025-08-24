@@ -1,167 +1,360 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { MatchCard } from "@/components/MatchCard";
-import { ArrowLeft, History as HistoryIcon, Filter, Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { Input } from "@/components/ui/input";
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import { useMatches } from '@/hooks/useMatches'
+import { useVenues } from '@/hooks/useVenues'
+import Navigation from '@/components/Navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { 
+  History, 
+  Search, 
+  Filter, 
+  Calendar, 
+  Users, 
+  Trophy, 
+  MapPin,
+  Clock,
+  Eye
+} from 'lucide-react'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 
-interface Match {
-  id: string;
-  date: string;
-  teamA: string;
-  teamB: string;
-  scoreA: number;
-  scoreB: number;
-  duration?: string;
-  winner?: "A" | "B";
-  mode?: string;
-  players?: {
-    teamA: string[];
-    teamB: string[];
-  };
-}
+const History: React.FC = () => {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  
+  // Filtres
+  const [selectedVenue, setSelectedVenue] = useState<string>('')
+  const [selectedMode, setSelectedMode] = useState<string>('')
+  const [selectedStatus, setSelectedStatus] = useState<string>('')
+  const [searchTerm, setSearchTerm] = useState('')
 
-export default function History() {
-  const navigate = useNavigate();
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterMode, setFilterMode] = useState<string>("all");
+  // Hooks pour les données
+  const { data: matches, isLoading } = useMatches(selectedVenue)
+  const { data: venues } = useVenues()
 
-  useEffect(() => {
-    const savedHistory = localStorage.getItem('matchHistory');
-    if (savedHistory) {
-      setMatches(JSON.parse(savedHistory));
+  // Filtrer les matchs
+  const filteredMatches = matches?.filter(match => {
+    const matchesMode = !selectedMode || match.mode === selectedMode
+    const matchesStatus = !selectedStatus || match.status === selectedStatus
+    const matchesSearch = !searchTerm || 
+      match.team_a?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      match.team_b?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      match.venue?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    return matchesMode && matchesStatus && matchesSearch
+  }) || []
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <Badge variant="default">Terminé</Badge>
+      case 'in_progress':
+        return <Badge variant="secondary">En cours</Badge>
+      case 'pending':
+        return <Badge variant="outline">En attente</Badge>
+      case 'cancelled':
+        return <Badge variant="destructive">Annulé</Badge>
+      default:
+        return <Badge variant="outline">{status}</Badge>
     }
-  }, []);
+  }
 
-  const filteredMatches = matches.filter(match => {
-    const matchesSearch = searchTerm === "" || 
-      match.teamA.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      match.teamB.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (match.players?.teamA.join(' ').toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (match.players?.teamB.join(' ').toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesFilter = filterMode === "all" || match.mode === filterMode;
-    
-    return matchesSearch && matchesFilter;
-  });
+  const getModeIcon = (mode: string) => {
+    switch (mode) {
+      case '1v1':
+        return <Users className="h-4 w-4" />
+      case '2v2':
+        return <Users className="h-4 w-4" />
+      case '4v4':
+        return <Users className="h-4 w-4" />
+      default:
+        return <Users className="h-4 w-4" />
+    }
+  }
 
-  const stats = {
-    totalMatches: matches.length,
-    totalGoals: matches.reduce((sum, match) => sum + match.scoreA + match.scoreB, 0),
-    averageScore: matches.length > 0 ? 
-      (matches.reduce((sum, match) => sum + Math.max(match.scoreA, match.scoreB), 0) / matches.length).toFixed(1) : 0
-  };
+  const formatDuration = (startedAt: string, endedAt?: string) => {
+    if (!startedAt) return 'Non démarré'
+    
+    const start = new Date(startedAt)
+    const end = endedAt ? new Date(endedAt) : new Date()
+    const duration = Math.floor((end.getTime() - start.getTime()) / 60000)
+    
+    if (duration < 60) return `${duration} min`
+    const hours = Math.floor(duration / 60)
+    const minutes = duration % 60
+    return `${hours}h${minutes > 0 ? ` ${minutes}min` : ''}`
+  }
+
+  const getWinner = (match: any) => {
+    if (match.status !== 'completed') return null
+    return match.score_a > match.score_b ? 'A' : match.score_b > match.score_a ? 'B' : null
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle">
+        <Navigation />
+        <div className="container mx-auto px-4 py-8">
+          <Alert>
+            <AlertDescription>
+              Vous devez être connecté pour voir l'historique.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-subtle p-4">
-      {/* Header */}
-      <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={() => navigate('/')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <h1 className="text-2xl font-bold ml-4 flex items-center">
-          <HistoryIcon className="mr-2 h-6 w-6" />
-          Match History
-        </h1>
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <Card className="shadow-card">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-primary">{stats.totalMatches}</div>
-            <div className="text-sm text-muted-foreground">Total Matches</div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-accent">{stats.totalGoals}</div>
-            <div className="text-sm text-muted-foreground">Total Goals</div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-success">{stats.averageScore}</div>
-            <div className="text-sm text-muted-foreground">Avg Winner Score</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filter */}
-      <Card className="shadow-card mb-6">
-        <CardContent className="p-4 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search teams or players..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <div className="flex flex-wrap gap-2">
-              {["all", "1v1", "2v2", "4v4"].map((mode) => (
-                <Button
-                  key={mode}
-                  variant={filterMode === mode ? "sport" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterMode(mode)}
-                >
-                  {mode === "all" ? "All Modes" : mode.toUpperCase()}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Matches List */}
-      {filteredMatches.length === 0 ? (
-        <Card className="shadow-card">
-          <CardContent className="p-8 text-center">
-            <HistoryIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">
-              {matches.length === 0 ? "No matches yet" : "No matches found"}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {matches.length === 0 
-                ? "Start your first match to see it here!"
-                : "Try adjusting your search or filter criteria"
-              }
+    <div className="min-h-screen bg-gradient-subtle">
+      <Navigation />
+      
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Historique des matchs</h1>
+            <p className="text-muted-foreground">
+              Consultez tous vos matchs et statistiques
             </p>
-            {matches.length === 0 && (
-              <Button variant="sport" onClick={() => navigate('/match/new')}>
-                Start First Match
-              </Button>
-            )}
+          </div>
+        </div>
+
+        {/* Filtres */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Filter className="h-5 w-5" />
+              <span>Filtres</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Recherche */}
+              <div>
+                <Label htmlFor="search">Recherche</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="search"
+                    placeholder="Rechercher..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {/* Lieu */}
+              <div>
+                <Label htmlFor="venue">Lieu</Label>
+                <Select value={selectedVenue} onValueChange={setSelectedVenue}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous les lieux" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tous les lieux</SelectItem>
+                    {venues?.map((venue) => (
+                      <SelectItem key={venue.id} value={venue.id}>
+                        {venue.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Mode */}
+              <div>
+                <Label htmlFor="mode">Mode</Label>
+                <Select value={selectedMode} onValueChange={setSelectedMode}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous les modes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tous les modes</SelectItem>
+                    <SelectItem value="1v1">1v1</SelectItem>
+                    <SelectItem value="2v2">2v2</SelectItem>
+                    <SelectItem value="4v4">4v4</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Statut */}
+              <div>
+                <Label htmlFor="status">Statut</Label>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous les statuts" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tous les statuts</SelectItem>
+                    <SelectItem value="completed">Terminé</SelectItem>
+                    <SelectItem value="in_progress">En cours</SelectItem>
+                    <SelectItem value="pending">En attente</SelectItem>
+                    <SelectItem value="cancelled">Annulé</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-4">
-          {filteredMatches.map((match) => (
-            <div key={match.id} className="relative">
-              <MatchCard match={match} />
-              {match.mode && (
-                <Badge 
-                  variant="secondary" 
-                  className="absolute top-2 right-2 text-xs"
-                >
-                  {match.mode.toUpperCase()}
-                </Badge>
-              )}
-            </div>
-          ))}
+
+        {/* Statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-primary">
+                {filteredMatches.length}
+              </div>
+              <div className="text-sm text-muted-foreground">Total matchs</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {filteredMatches.filter(m => m.status === 'completed').length}
+              </div>
+              <div className="text-sm text-muted-foreground">Matchs terminés</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {filteredMatches.filter(m => m.status === 'in_progress').length}
+              </div>
+              <div className="text-sm text-muted-foreground">En cours</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {filteredMatches.filter(m => m.status === 'pending').length}
+              </div>
+              <div className="text-sm text-muted-foreground">En attente</div>
+            </CardContent>
+          </Card>
         </div>
-      )}
+
+        {/* Liste des matchs */}
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : filteredMatches.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Aucun match trouvé</h3>
+              <p className="text-muted-foreground mb-4">
+                Aucun match ne correspond à vos critères de recherche.
+              </p>
+              <Button onClick={() => navigate('/match/new')}>
+                Créer un nouveau match
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {filteredMatches.map((match) => {
+              const winner = getWinner(match)
+              const isUserInMatch = match.team_a?.members?.some((m: any) => m.user_id === user.id) ||
+                                   match.team_b?.members?.some((m: any) => m.user_id === user.id)
+
+              return (
+                <Card key={match.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          {getModeIcon(match.mode)}
+                          <span className="font-medium">{match.mode}</span>
+                        </div>
+                        {getStatusBadge(match.status)}
+                        {isUserInMatch && (
+                          <Badge variant="outline">Votre match</Badge>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/match/play/${match.id}`)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Voir
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      {/* Équipes */}
+                      <div className="text-center">
+                        <div className="text-lg font-semibold mb-1">
+                          {match.team_a?.name || 'Équipe A'}
+                        </div>
+                        <div className="text-3xl font-bold text-blue-600">
+                          {match.score_a}
+                        </div>
+                        {winner === 'A' && (
+                          <Trophy className="h-5 w-5 text-yellow-500 mx-auto mt-1" />
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-center">
+                        <div className="text-2xl font-bold text-muted-foreground">VS</div>
+                      </div>
+
+                      <div className="text-center">
+                        <div className="text-lg font-semibold mb-1">
+                          {match.team_b?.name || 'Équipe B'}
+                        </div>
+                        <div className="text-3xl font-bold text-red-600">
+                          {match.score_b}
+                        </div>
+                        {winner === 'B' && (
+                          <Trophy className="h-5 w-5 text-yellow-500 mx-auto mt-1" />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>{match.venue?.name || 'Lieu non spécifié'}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          {match.created_at 
+                            ? format(new Date(match.created_at), 'dd/MM/yyyy à HH:mm', { locale: fr })
+                            : 'Date inconnue'
+                          }
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {formatDuration(match.started_at, match.ended_at)}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
-  );
+  )
 }
+
+export default History
