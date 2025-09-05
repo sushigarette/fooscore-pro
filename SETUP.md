@@ -1,4 +1,4 @@
-# Guide de Configuration FooScore Pro 🚀
+# Guide de Configuration MHBABY 🚀
 
 ## Étape 1: Créer un projet Supabase
 
@@ -7,7 +7,7 @@
 3. Connectez-vous avec GitHub ou créez un compte
 4. Cliquez sur "New Project"
 5. Choisissez votre organisation
-6. Donnez un nom à votre projet (ex: "fooscore-pro")
+6. Donnez un nom à votre projet (ex: "mhbaby-pro")
 7. Créez un mot de passe pour la base de données
 8. Choisissez une région proche de vous
 9. Cliquez sur "Create new project"
@@ -52,7 +52,7 @@ cp env.example .env
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-VITE_APP_NAME=FooScore Pro
+VITE_APP_NAME=MHBABY
 VITE_APP_VERSION=1.0.0
 ```
 
@@ -142,4 +142,4 @@ Si vous rencontrez des problèmes :
 
 ---
 
-**FooScore Pro** est maintenant configuré et prêt à l'emploi ! 🏆⚽ 
+**MHBABY** est maintenant configuré et prêt à l'emploi ! 🏆⚽ 

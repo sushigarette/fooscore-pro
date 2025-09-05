@@ -11,36 +11,86 @@ import { Mail, Loader2, ArrowLeft } from 'lucide-react'
 
 const Auth: React.FC = () => {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isEmailSent, setIsEmailSent] = useState(false)
-  const { signIn } = useAuth()
+  const [isSignUp, setIsSignUp] = useState(false)
+  const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
 
+  const getErrorMessage = (error: any) => {
+    const message = error.message.toLowerCase()
+    
+    if (message.includes('invalid login credentials')) {
+      return "Email ou mot de passe incorrect"
+    }
+    if (message.includes('email not confirmed')) {
+      return "Veuillez confirmer votre email avant de vous connecter"
+    }
+    if (message.includes('user already registered')) {
+      return "Un compte existe déjà avec cet email"
+    }
+    if (message.includes('password should be at least')) {
+      return "Le mot de passe doit contenir au moins 6 caractères"
+    }
+    if (message.includes('invalid email')) {
+      return "Adresse email invalide"
+    }
+    
+    return error.message || "Une erreur est survenue"
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) return
+    if (!email || !password) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Erreur",
+        description: "Le mot de passe doit contenir au moins 6 caractères",
+        variant: "destructive"
+      })
+      return
+    }
 
     setIsLoading(true)
     try {
-      const { error } = await signIn(email)
+      const { error } = isSignUp 
+        ? await signUp(email, password)
+        : await signIn(email, password)
+      
       if (error) {
         toast({
           title: "Erreur",
-          description: error.message,
+          description: getErrorMessage(error),
           variant: "destructive"
         })
       } else {
-        setIsEmailSent(true)
-        toast({
-          title: "Email envoyé !",
-          description: "Vérifiez votre boîte mail pour le code de connexion."
-        })
+        if (isSignUp) {
+          toast({
+            title: "Compte créé !",
+            description: "Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter."
+          })
+          setIsSignUp(false)
+        } else {
+          toast({
+            title: "Connexion réussie !",
+            description: "Vous êtes maintenant connecté."
+          })
+          navigate('/')
+        }
       }
     } catch (error) {
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de l'envoi de l'email.",
+        description: "Une erreur est survenue lors de l'authentification.",
         variant: "destructive"
       })
     } finally {
@@ -61,67 +111,82 @@ const Auth: React.FC = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour
           </Button>
-          <CardTitle className="text-2xl font-bold">FooScore Pro</CardTitle>
+          <CardTitle className="text-2xl font-bold">MHBABY</CardTitle>
           <CardDescription>
-            {isEmailSent 
-              ? "Vérifiez votre email pour continuer"
+            {isSignUp 
+              ? "Créez un compte pour commencer à jouer"
               : "Connectez-vous pour commencer à jouer"
             }
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!isEmailSent ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="votre@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Envoi en cours...
-                  </>
-                ) : (
-                  <>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Envoyer le code de connexion
-                  </>
-                )}
-              </Button>
-            </form>
-          ) : (
-            <div className="space-y-4">
-              <Alert>
-                <Mail className="h-4 w-4" />
-                <AlertDescription>
-                  Un email avec un code de connexion a été envoyé à <strong>{email}</strong>.
-                  Cliquez sur le lien dans l'email pour vous connecter.
-                </AlertDescription>
-              </Alert>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="votre@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Mot de passe</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder={isSignUp ? "Minimum 6 caractères" : "Votre mot de passe"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+              {isSignUp && (
+                <p className="text-xs text-muted-foreground">
+                  Le mot de passe doit contenir au moins 6 caractères
+                </p>
+              )}
+            </div>
+            
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isSignUp ? "Création en cours..." : "Connexion en cours..."}
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  {isSignUp ? "Créer le compte" : "Se connecter"}
+                </>
+              )}
+            </Button>
+            
+            <div className="text-center">
               <Button
-                variant="outline"
-                className="w-full"
+                type="button"
+                variant="link"
                 onClick={() => {
-                  setIsEmailSent(false)
+                  setIsSignUp(!isSignUp)
                   setEmail('')
+                  setPassword('')
                 }}
+                className="text-sm"
               >
-                Utiliser un autre email
+                {isSignUp 
+                  ? "Déjà un compte ? Se connecter" 
+                  : "Pas de compte ? Créer un compte"
+                }
               </Button>
             </div>
-          )}
+          </form>
           
           <div className="mt-6 text-center text-sm text-muted-foreground">
             <p>

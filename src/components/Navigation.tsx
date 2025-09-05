@@ -83,7 +83,7 @@ const Navigation: React.FC = () => {
             <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <Trophy className="h-5 w-5 text-white" />
             </div>
-            <span className="font-bold text-xl text-gray-900">FooScore</span>
+            <span className="font-bold text-xl text-gray-900">MHBABY</span>
           </Link>
 
           {/* Navigation desktop */}

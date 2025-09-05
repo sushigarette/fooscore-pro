@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMatches } from '@/hooks/useMatches'
-import { useVenues } from '@/hooks/useVenues'
 import Navigation from '@/components/Navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,13 +11,12 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { 
-  History, 
+  History as HistoryIcon, 
   Search, 
   Filter, 
   Calendar, 
   Users, 
   Trophy, 
-  MapPin,
   Clock,
   Eye
 } from 'lucide-react'
@@ -30,23 +28,21 @@ const History: React.FC = () => {
   const { user } = useAuth()
   
   // Filtres
-  const [selectedVenue, setSelectedVenue] = useState<string>('')
-  const [selectedMode, setSelectedMode] = useState<string>('')
-  const [selectedStatus, setSelectedStatus] = useState<string>('')
+  const [selectedMode, setSelectedMode] = useState<string>('all')
+  const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
 
   // Hooks pour les données
-  const { data: matches, isLoading } = useMatches(selectedVenue)
-  const { data: venues } = useVenues()
+  const { data: matches, isLoading, error } = useMatches()
+
 
   // Filtrer les matchs
   const filteredMatches = matches?.filter(match => {
-    const matchesMode = !selectedMode || match.mode === selectedMode
-    const matchesStatus = !selectedStatus || match.status === selectedStatus
+    const matchesMode = selectedMode === 'all' || match.mode === selectedMode
+    const matchesStatus = selectedStatus === 'all' || match.status === selectedStatus
     const matchesSearch = !searchTerm || 
       match.team_a?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      match.team_b?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      match.venue?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      match.team_b?.name?.toLowerCase().includes(searchTerm.toLowerCase())
 
     return matchesMode && matchesStatus && matchesSearch
   }) || []
@@ -71,8 +67,6 @@ const History: React.FC = () => {
       case '1v1':
         return <Users className="h-4 w-4" />
       case '2v2':
-        return <Users className="h-4 w-4" />
-      case '4v4':
         return <Users className="h-4 w-4" />
       default:
         return <Users className="h-4 w-4" />
@@ -112,6 +106,21 @@ const History: React.FC = () => {
     )
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle">
+        <Navigation />
+        <div className="container mx-auto px-4 py-8">
+          <Alert variant="destructive">
+            <AlertDescription>
+              Erreur lors du chargement des matchs: {error.message}
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <Navigation />
@@ -127,6 +136,7 @@ const History: React.FC = () => {
           </div>
         </div>
 
+
         {/* Filtres */}
         <Card className="mb-8">
           <CardHeader>
@@ -136,7 +146,7 @@ const History: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Recherche */}
               <div>
                 <Label htmlFor="search">Recherche</Label>
@@ -144,30 +154,12 @@ const History: React.FC = () => {
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder="Rechercher..."
+                    placeholder="Rechercher par équipe..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
                   />
                 </div>
-              </div>
-
-              {/* Lieu */}
-              <div>
-                <Label htmlFor="venue">Lieu</Label>
-                <Select value={selectedVenue} onValueChange={setSelectedVenue}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous les lieux" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Tous les lieux</SelectItem>
-                    {venues?.map((venue) => (
-                      <SelectItem key={venue.id} value={venue.id}>
-                        {venue.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               {/* Mode */}
@@ -178,10 +170,9 @@ const History: React.FC = () => {
                     <SelectValue placeholder="Tous les modes" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tous les modes</SelectItem>
+                    <SelectItem value="all">Tous les modes</SelectItem>
                     <SelectItem value="1v1">1v1</SelectItem>
                     <SelectItem value="2v2">2v2</SelectItem>
-                    <SelectItem value="4v4">4v4</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -194,7 +185,7 @@ const History: React.FC = () => {
                     <SelectValue placeholder="Tous les statuts" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tous les statuts</SelectItem>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
                     <SelectItem value="completed">Terminé</SelectItem>
                     <SelectItem value="in_progress">En cours</SelectItem>
                     <SelectItem value="pending">En attente</SelectItem>
@@ -253,7 +244,7 @@ const History: React.FC = () => {
         ) : filteredMatches.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <HistoryIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">Aucun match trouvé</h3>
               <p className="text-muted-foreground mb-4">
                 Aucun match ne correspond à vos critères de recherche.
@@ -325,11 +316,7 @@ const History: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="h-4 w-4" />
-                        <span>{match.venue?.name || 'Lieu non spécifié'}</span>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center space-x-2">
                         <Calendar className="h-4 w-4" />
                         <span>

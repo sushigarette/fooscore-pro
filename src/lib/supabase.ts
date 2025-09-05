@@ -35,11 +35,9 @@ export interface GameRules {
   final_score: 5 | 7 | 10
   sets_enabled: boolean
   best_of?: 3 | 5
-  golden_goal: boolean
   overtime: boolean
   allow_own_goals: boolean
   allow_lobs: boolean
-  service_alternate: boolean
   handicap_enabled: boolean
 }
 
@@ -84,9 +82,9 @@ export interface TeamMember {
 
 export interface Match {
   id: string
-  table_id: string
-  venue_id: string
-  mode: '1v1' | '2v2' | '4v4'
+  table_id?: string
+  venue_id?: string
+  mode: '1v1' | '2v2'
   team_a_id: string
   team_b_id: string
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
@@ -165,7 +163,7 @@ export interface TournamentFixture {
 export interface Rating {
   id: string
   user_id: string
-  mode: '1v1' | '2v2' | '4v4'
+  mode: '1v1' | '2v2'
   venue_id?: string
   elo: number
   games_played: number
@@ -179,7 +177,7 @@ export interface Rating {
 export interface TeamRating {
   id: string
   team_id: string
-  mode: '2v2' | '4v4'
+  mode: '2v2'
   venue_id?: string
   elo: number
   games_played: number
@@ -213,7 +211,7 @@ export interface Badge {
 export interface BadgeCriteria {
   type: 'wins' | 'streak' | 'goals' | 'clean_sheet' | 'comeback' | 'mvp'
   value: number
-  mode?: '1v1' | '2v2' | '4v4'
+  mode?: '1v1' | '2v2'
   venue_id?: string
 }
 

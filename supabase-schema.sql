@@ -1,4 +1,4 @@
--- Script de création des tables pour FooScore Pro
+-- Script de création des tables pour MHBABY
 -- À exécuter dans l'éditeur SQL de Supabase
 
 -- Note: app.jwt_secret est géré automatiquement par Supabase

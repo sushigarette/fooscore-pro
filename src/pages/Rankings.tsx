@@ -127,11 +127,11 @@ export default function Rankings() {
       <div className="flex items-center mb-6">
         <Button variant="ghost" onClick={() => navigate('/')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          Retour
         </Button>
         <h1 className="text-2xl font-bold ml-4 flex items-center">
           <Trophy className="mr-2 h-6 w-6" />
-          Rankings
+          Classements
         </h1>
       </div>
 
@@ -140,28 +140,28 @@ export default function Rankings() {
         <CardContent className="p-4">
           <div className="flex items-center space-x-2">
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium mr-4">Sort by:</span>
+            <span className="text-sm font-medium mr-4">Trier par :</span>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant={sortBy === 'elo' ? 'sport' : 'outline'}
                 size="sm"
                 onClick={() => setSortBy('elo')}
               >
-                ELO Rating
+                Classement ELO
               </Button>
               <Button
                 variant={sortBy === 'winRate' ? 'sport' : 'outline'}
                 size="sm"
                 onClick={() => setSortBy('winRate')}
               >
-                Win Rate
+                Taux de Victoire
               </Button>
               <Button
                 variant={sortBy === 'matches' ? 'sport' : 'outline'}
                 size="sm"
                 onClick={() => setSortBy('matches')}
               >
-                Most Active
+                Plus Actif
               </Button>
             </div>
           </div>
@@ -173,12 +173,12 @@ export default function Rankings() {
         <Card className="shadow-card">
           <CardContent className="p-8 text-center">
             <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">No rankings yet</h3>
+            <h3 className="text-lg font-semibold mb-2">Aucun classement pour le moment</h3>
             <p className="text-muted-foreground mb-4">
-              Play some matches to see player rankings here!
+              Jouez quelques matchs pour voir les classements des joueurs ici !
             </p>
             <Button variant="sport" onClick={() => navigate('/match/new')}>
-              Start First Match
+              Commencer le Premier Match
             </Button>
           </CardContent>
         </Card>
@@ -210,7 +210,7 @@ export default function Rankings() {
                       </div>
                       
                       <div className="text-sm text-muted-foreground">
-                        {player.matches} matches • {player.wins}W-{player.losses}L
+                        {player.matches} matchs • {player.wins}V-{player.losses}D
                       </div>
                     </div>
                   </div>
@@ -223,9 +223,9 @@ export default function Rankings() {
                     </div>
                     
                     <div className="text-xs text-muted-foreground">
-                      {sortBy === 'elo' ? 'ELO Rating' :
-                       sortBy === 'winRate' ? 'Win Rate' :
-                       'Matches Played'}
+                      {sortBy === 'elo' ? 'Classement ELO' :
+                       sortBy === 'winRate' ? 'Taux de Victoire' :
+                       'Matchs Joués'}
                     </div>
                   </div>
                 </div>
@@ -239,14 +239,14 @@ export default function Rankings() {
                   
                   <div className="text-center">
                     <div className="text-lg font-semibold text-accent">{player.winRate.toFixed(1)}%</div>
-                    <div className="text-xs text-muted-foreground">Win Rate</div>
+                    <div className="text-xs text-muted-foreground">Taux de Victoire</div>
                   </div>
                   
                   <div className="text-center">
                     <div className="text-lg font-semibold text-primary">
                       {player.goalsFor > 0 ? (player.goalsFor / player.goalsAgainst).toFixed(2) : '0.00'}
                     </div>
-                    <div className="text-xs text-muted-foreground">Goal Ratio</div>
+                    <div className="text-xs text-muted-foreground">Ratio Buts</div>
                   </div>
                 </div>
               </CardContent>

@@ -1,10 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { useVenues, useTables } from '@/hooks/useVenues'
 import { useUsers } from '@/hooks/useUsers'
 import { useCreateMatch } from '@/hooks/useMatches'
-import { useTeams, useAddTeamMember } from '@/hooks/useTeams'
+import { useAddTeamMember, useCreateTeam } from '@/hooks/useTeams'
 import Navigation from '@/components/Navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,8 +21,7 @@ import {
   Play, 
   ArrowLeft, 
   Plus,
-  MapPin,
-  Table
+  User
 } from 'lucide-react'
 import type { GameRules } from '@/lib/supabase'
 
@@ -33,57 +31,62 @@ const NewMatch: React.FC = () => {
   const { user } = useAuth()
   const { toast } = useToast()
   
-  // État du formulaire
-  const [mode, setMode] = useState<'1v1' | '2v2' | '4v4'>(
-    (searchParams.get('mode') as '1v1' | '2v2' | '4v4') || '2v2'
+  // État du wizard
+  const [currentStep, setCurrentStep] = useState(1)
+  const [mode, setMode] = useState<'1v1' | '2v2'>(
+    (searchParams.get('mode') as '1v1' | '2v2') || '2v2'
   )
-  const [selectedVenue, setSelectedVenue] = useState<string>('')
-  const [selectedTable, setSelectedTable] = useState<string>('')
   const [teamAMembers, setTeamAMembers] = useState<string[]>([])
   const [teamBMembers, setTeamBMembers] = useState<string[]>([])
   const [teamAName, setTeamAName] = useState('')
   const [teamBName, setTeamBName] = useState('')
-  const [rules, setRules] = useState<GameRules>({
-    final_score: 7,
-    sets_enabled: false,
-    golden_goal: false,
-    overtime: false,
-    allow_own_goals: true,
-    allow_lobs: true,
-    service_alternate: true,
-    handicap_enabled: false
-  })
 
   // Hooks pour les données
-  const { data: venues } = useVenues()
-  const { data: tables } = useTables(selectedVenue)
   const { data: users } = useUsers()
-  const { data: teams } = useTeams(selectedVenue)
   const createMatch = useCreateMatch()
   const createTeam = useCreateTeam()
   const addTeamMember = useAddTeamMember()
 
-  // Validation
-  const isValid = () => {
-    const requiredPlayers = mode === '1v1' ? 1 : mode === '2v2' ? 2 : 4
-    return (
-      selectedVenue &&
-      selectedTable &&
-      teamAMembers.length === requiredPlayers &&
-      teamBMembers.length === requiredPlayers &&
-      teamAName.trim() &&
-      teamBName.trim()
-    )
+  // Validation par étape
+  const isStepValid = (step: number) => {
+    switch (step) {
+      case 1:
+        return mode !== null
+      case 2:
+        const requiredPlayers = mode === '1v1' ? 1 : 2
+        return (
+          teamAMembers.length === requiredPlayers &&
+          teamBMembers.length === requiredPlayers &&
+          teamAName.trim() &&
+          teamBName.trim()
+        )
+      default:
+        return false
+    }
+  }
+
+  const canProceed = () => isStepValid(currentStep)
+  const canGoBack = () => currentStep > 1
+
+  const handleNext = () => {
+    if (canProceed() && currentStep < 2) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const handlePrevious = () => {
+    if (canGoBack()) {
+      setCurrentStep(currentStep - 1)
+    }
   }
 
   const handleCreateMatch = async () => {
-    if (!isValid() || !user) return
+    if (!canProceed() || !user) return
 
     try {
       // Créer les équipes temporaires
       const teamA = await createTeam.mutateAsync({
         name: teamAName,
-        venue_id: selectedVenue,
         is_permanent: false
       })
 
@@ -98,7 +101,6 @@ const NewMatch: React.FC = () => {
 
       const teamB = await createTeam.mutateAsync({
         name: teamBName,
-        venue_id: selectedVenue,
         is_permanent: false
       })
 
@@ -111,14 +113,19 @@ const NewMatch: React.FC = () => {
         })
       }
 
-      // Créer le match
+      // Créer le match avec des règles par défaut
       const match = await createMatch.mutateAsync({
-        table_id: selectedTable,
-        venue_id: selectedVenue,
         mode,
         team_a_id: teamA.id,
         team_b_id: teamB.id,
-        rules,
+        rules: {
+          final_score: 7,
+          sets_enabled: false,
+          overtime: false,
+          allow_own_goals: true,
+          allow_lobs: true,
+          handicap_enabled: false
+        },
         status: 'pending'
       })
 
@@ -139,7 +146,7 @@ const NewMatch: React.FC = () => {
   }
 
   const addPlayerToTeam = (playerId: string, team: 'A' | 'B') => {
-    const requiredPlayers = mode === '1v1' ? 1 : mode === '2v2' ? 2 : 4
+    const requiredPlayers = mode === '1v1' ? 1 : 2
     
     if (team === 'A') {
       if (teamAMembers.length < requiredPlayers && !teamAMembers.includes(playerId)) {
@@ -165,8 +172,169 @@ const NewMatch: React.FC = () => {
   }
 
   const getRequiredPlayers = () => {
-    return mode === '1v1' ? 1 : mode === '2v2' ? 2 : 4
+    return mode === '1v1' ? 1 : 2
   }
+
+  // Composant pour l'étape 1 : Sélection du mode
+  const Step1ModeSelection = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <Target className="h-5 w-5" />
+          <span>Choisissez le mode de jeu</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4">
+          {(['1v1', '2v2'] as const).map((gameMode) => (
+            <Button
+              key={gameMode}
+              variant={mode === gameMode ? 'default' : 'outline'}
+              onClick={() => setMode(gameMode)}
+              className="h-20 flex-col space-y-2 p-4"
+            >
+              <div className="flex items-center space-x-2">
+                {gameMode === '1v1' ? (
+                  <User className="h-6 w-6" />
+                ) : (
+                  <Users className="h-6 w-6" />
+                )}
+                <span className="text-base font-semibold">{gameMode}</span>
+              </div>
+              {gameMode === '2v2' && (
+                <Badge variant="secondary" className="text-xs">Populaire</Badge>
+              )}
+            </Button>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  // Composant pour l'étape 2 : Création des équipes
+  const Step2TeamCreation = () => (
+    <div className="space-y-6">
+      {/* Équipe A */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Équipe A</span>
+            <Badge variant="outline">{teamAMembers.length}/{getRequiredPlayers()}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="team-a-name">Nom de l'équipe</Label>
+            <Input
+              id="team-a-name"
+              value={teamAName}
+              onChange={(e) => setTeamAName(e.target.value)}
+              placeholder="Nom de l'équipe A"
+            />
+          </div>
+
+          <div>
+            <Label>Joueurs</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {users?.map((player) => (
+                <Button
+                  key={player.id}
+                  variant={teamAMembers.includes(player.id) ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => addPlayerToTeam(player.id, 'A')}
+                  disabled={teamAMembers.includes(player.id) || teamAMembers.length >= getRequiredPlayers()}
+                  className="justify-start"
+                >
+                  <span className="truncate">{player.username}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {teamAMembers.length > 0 && (
+            <div>
+              <Label>Équipe A sélectionnée</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {teamAMembers.map((playerId) => (
+                  <Badge key={playerId} variant="secondary">
+                    {getPlayerName(playerId)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 ml-1"
+                      onClick={() => removePlayerFromTeam(playerId, 'A')}
+                    >
+                      ×
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Équipe B */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Équipe B</span>
+            <Badge variant="outline">{teamBMembers.length}/{getRequiredPlayers()}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="team-b-name">Nom de l'équipe</Label>
+            <Input
+              id="team-b-name"
+              value={teamBName}
+              onChange={(e) => setTeamBName(e.target.value)}
+              placeholder="Nom de l'équipe B"
+            />
+          </div>
+
+          <div>
+            <Label>Joueurs</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {users?.map((player) => (
+                <Button
+                  key={player.id}
+                  variant={teamBMembers.includes(player.id) ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => addPlayerToTeam(player.id, 'B')}
+                  disabled={teamBMembers.includes(player.id) || teamBMembers.length >= getRequiredPlayers()}
+                  className="justify-start"
+                >
+                  <span className="truncate">{player.username}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {teamBMembers.length > 0 && (
+            <div>
+              <Label>Équipe B sélectionnée</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {teamBMembers.map((playerId) => (
+                  <Badge key={playerId} variant="secondary">
+                    {getPlayerName(playerId)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 ml-1"
+                      onClick={() => removePlayerFromTeam(playerId, 'B')}
+                    >
+                      ×
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
 
   if (!user) {
     return (
@@ -187,7 +355,7 @@ const NewMatch: React.FC = () => {
     <div className="min-h-screen bg-gradient-subtle">
       <Navigation />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -201,276 +369,69 @@ const NewMatch: React.FC = () => {
             </Button>
             <div>
               <h1 className="text-3xl font-bold">Nouveau Match</h1>
-              <p className="text-muted-foreground">Créez un nouveau match de baby-foot</p>
+              <p className="text-muted-foreground">
+                Étape {currentStep} sur 2 - {currentStep === 1 ? 'Mode de jeu' : 'Création des équipes'}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Configuration du match */}
-          <div className="space-y-6">
-            {/* Mode de jeu */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Target className="h-5 w-5" />
-                  <span>Mode de jeu</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-3">
-                  {(['1v1', '2v2', '4v4'] as const).map((gameMode) => (
-                    <Button
-                      key={gameMode}
-                      variant={mode === gameMode ? 'default' : 'outline'}
-                      onClick={() => setMode(gameMode)}
-                      className="h-16 flex-col"
-                    >
-                      <Users className="h-5 w-5 mb-1" />
-                      <span className="text-sm font-medium">{gameMode}</span>
-                      {gameMode === '2v2' && (
-                        <Badge variant="secondary" className="mt-1">Populaire</Badge>
-                      )}
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Lieu et table */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <MapPin className="h-5 w-5" />
-                  <span>Lieu et table</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="venue">Lieu</Label>
-                  <Select value={selectedVenue} onValueChange={setSelectedVenue}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez un lieu" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {venues?.map((venue) => (
-                        <SelectItem key={venue.id} value={venue.id}>
-                          {venue.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {selectedVenue && (
-                  <div>
-                    <Label htmlFor="table">Table</Label>
-                    <Select value={selectedTable} onValueChange={setSelectedTable}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez une table" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tables?.map((table) => (
-                          <SelectItem key={table.id} value={table.id}>
-                            <div className="flex items-center space-x-2">
-                              <Table className="h-4 w-4" />
-                              <span>{table.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Règles du jeu */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Settings className="h-5 w-5" />
-                  <span>Règles du jeu</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="final-score">Score final</Label>
-                  <Select 
-                    value={rules.final_score.toString()} 
-                    onValueChange={(value) => setRules({...rules, final_score: parseInt(value) as 5 | 7 | 10})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5 buts</SelectItem>
-                      <SelectItem value="7">7 buts</SelectItem>
-                      <SelectItem value="10">10 buts</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="golden-goal"
-                      checked={rules.golden_goal}
-                      onCheckedChange={(checked) => setRules({...rules, golden_goal: checked as boolean})}
-                    />
-                    <Label htmlFor="golden-goal">But d'or</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="allow-own-goals"
-                      checked={rules.allow_own_goals}
-                      onCheckedChange={(checked) => setRules({...rules, allow_own_goals: checked as boolean})}
-                    />
-                    <Label htmlFor="allow-own-goals">Autoriser les gamelles</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="service-alternate"
-                      checked={rules.service_alternate}
-                      onCheckedChange={(checked) => setRules({...rules, service_alternate: checked as boolean})}
-                    />
-                    <Label htmlFor="service-alternate">Service alterné</Label>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Indicateur de progression */}
+        <div className="mb-8">
+          <div className="flex items-center space-x-4">
+            <div className={`flex items-center space-x-2 ${currentStep >= 1 ? 'text-primary' : 'text-muted-foreground'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                currentStep >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+              }`}>
+                1
+              </div>
+              <span className="text-sm font-medium">Mode de jeu</span>
+            </div>
+            <div className="flex-1 h-0.5 bg-muted">
+              <div className={`h-full transition-all duration-300 ${
+                currentStep >= 2 ? 'bg-primary' : 'bg-muted'
+              }`} style={{ width: currentStep >= 2 ? '100%' : '0%' }} />
+            </div>
+            <div className={`flex items-center space-x-2 ${currentStep >= 2 ? 'text-primary' : 'text-muted-foreground'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                currentStep >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+              }`}>
+                2
+              </div>
+              <span className="text-sm font-medium">Équipes</span>
+            </div>
           </div>
+        </div>
 
-          {/* Composition des équipes */}
-          <div className="space-y-6">
-            {/* Équipe A */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Équipe A</span>
-                  <Badge variant="outline">{teamAMembers.length}/{getRequiredPlayers()}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="team-a-name">Nom de l'équipe</Label>
-                  <Input
-                    id="team-a-name"
-                    value={teamAName}
-                    onChange={(e) => setTeamAName(e.target.value)}
-                    placeholder="Nom de l'équipe A"
-                  />
-                </div>
+        {/* Contenu de l'étape actuelle */}
+        <div className="mb-8">
+          {currentStep === 1 && <Step1ModeSelection />}
+          {currentStep === 2 && <Step2TeamCreation />}
+        </div>
 
-                <div>
-                  <Label>Joueurs</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {users?.map((player) => (
-                      <Button
-                        key={player.id}
-                        variant={teamAMembers.includes(player.id) ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => addPlayerToTeam(player.id, 'A')}
-                        disabled={teamAMembers.includes(player.id) || teamAMembers.length >= getRequiredPlayers()}
-                        className="justify-start"
-                      >
-                        <span className="truncate">{player.username}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+        {/* Navigation */}
+        <div className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={!canGoBack()}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Précédent
+          </Button>
 
-                {teamAMembers.length > 0 && (
-                  <div>
-                    <Label>Équipe A sélectionnée</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {teamAMembers.map((playerId) => (
-                        <Badge key={playerId} variant="secondary">
-                          {getPlayerName(playerId)}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-4 w-4 p-0 ml-1"
-                            onClick={() => removePlayerFromTeam(playerId, 'A')}
-                          >
-                            ×
-                          </Button>
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Équipe B */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Équipe B</span>
-                  <Badge variant="outline">{teamBMembers.length}/{getRequiredPlayers()}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="team-b-name">Nom de l'équipe</Label>
-                  <Input
-                    id="team-b-name"
-                    value={teamBName}
-                    onChange={(e) => setTeamBName(e.target.value)}
-                    placeholder="Nom de l'équipe B"
-                  />
-                </div>
-
-                <div>
-                  <Label>Joueurs</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {users?.map((player) => (
-                      <Button
-                        key={player.id}
-                        variant={teamBMembers.includes(player.id) ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => addPlayerToTeam(player.id, 'B')}
-                        disabled={teamBMembers.includes(player.id) || teamBMembers.length >= getRequiredPlayers()}
-                        className="justify-start"
-                      >
-                        <span className="truncate">{player.username}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {teamBMembers.length > 0 && (
-                  <div>
-                    <Label>Équipe B sélectionnée</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {teamBMembers.map((playerId) => (
-                        <Badge key={playerId} variant="secondary">
-                          {getPlayerName(playerId)}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-4 w-4 p-0 ml-1"
-                            onClick={() => removePlayerFromTeam(playerId, 'B')}
-                          >
-                            ×
-                          </Button>
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Bouton de création */}
+          {currentStep === 1 ? (
             <Button
-              size="lg"
-              className="w-full"
+              onClick={handleNext}
+              disabled={!canProceed()}
+            >
+              Suivant
+              <Plus className="h-4 w-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
               onClick={handleCreateMatch}
-              disabled={!isValid() || createMatch.isPending}
+              disabled={!canProceed() || createMatch.isPending}
             >
               {createMatch.isPending ? (
                 <>
@@ -484,7 +445,7 @@ const NewMatch: React.FC = () => {
                 </>
               )}
             </Button>
-          </div>
+          )}
         </div>
       </div>
     </div>

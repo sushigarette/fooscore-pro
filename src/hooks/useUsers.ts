@@ -79,7 +79,7 @@ export const useUpdateUser = () => {
 }
 
 // Récupérer les classements des utilisateurs
-export const useUserRankings = (mode: '1v1' | '2v2' | '4v4', venueId?: string) => {
+export const useUserRankings = (mode: '1v1' | '2v2', venueId?: string) => {
   return useQuery({
     queryKey: ['rankings', 'users', mode, venueId],
     queryFn: async () => {

@@ -1,34 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { Match, MatchEvent, MatchSet } from '@/lib/supabase'
+import type { Match, MatchEvent } from '@/lib/supabase'
 
 // Récupérer tous les matchs
-export const useMatches = (venueId?: string) => {
+export const useMatches = () => {
   return useQuery({
-    queryKey: ['matches', venueId],
+    queryKey: ['matches'],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('matches')
         .select(`
           *,
           team_a:teams!team_a_id(*),
-          team_b:teams!team_b_id(*),
-          table:tables(*),
-          venue:venues(*)
+          team_b:teams!team_b_id(*)
         `)
         .order('created_at', { ascending: false })
 
-      if (venueId) {
-        query = query.eq('venue_id', venueId)
-      }
-
-      const { data, error } = await query
       if (error) throw error
       return data as (Match & {
         team_a: any
         team_b: any
-        table: any
-        venue: any
       })[]
     }
   })
@@ -43,12 +34,20 @@ export const useMatch = (matchId: string) => {
         .from('matches')
         .select(`
           *,
-          team_a:teams!team_a_id(*),
-          team_b:teams!team_b_id(*),
-          table:tables(*),
-          venue:venues(*),
-          sets:match_sets(*),
-          events:match_events(*)
+          team_a:teams!team_a_id(
+            *,
+            members:team_members(
+              *,
+              user:users(*)
+            )
+          ),
+          team_b:teams!team_b_id(
+            *,
+            members:team_members(
+              *,
+              user:users(*)
+            )
+          )
         `)
         .eq('id', matchId)
         .single()
@@ -57,10 +56,6 @@ export const useMatch = (matchId: string) => {
       return data as Match & {
         team_a: any
         team_b: any
-        table: any
-        venue: any
-        sets: MatchSet[]
-        events: MatchEvent[]
       }
     },
     enabled: !!matchId

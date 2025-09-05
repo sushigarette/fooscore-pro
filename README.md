@@ -1,4 +1,4 @@
-# FooScore Pro 🏆
+# MHBABY 🏆
 
 Application web mobile-first pour gérer des matchs de baby-foot et des tournois entre amis/équipes, avec profils, invitations, enregistrement des scores et classements joueurs & équipes.
 
@@ -7,7 +7,6 @@ Application web mobile-first pour gérer des matchs de baby-foot et des tournois
 ### Modes de jeu
 - **1v1** : Duels individuels
 - **2v2** : Mode le plus populaire (2 joueurs par équipe)
-- **4v4** : Matchs d'équipe complets
 
 ### Fonctionnalités principales
 - ✅ **Création rapide de parties** (moins de 30s)
@@ -45,7 +44,7 @@ Application web mobile-first pour gérer des matchs de baby-foot et des tournois
 ### 1. Cloner le projet
 ```bash
 git clone <repository-url>
-cd fooscore-pro
+cd mhbaby-pro
 ```
 
 ### 2. Installer les dépendances
@@ -79,7 +78,7 @@ cp env.example .env
 ```env
 VITE_SUPABASE_URL=votre_url_supabase
 VITE_SUPABASE_ANON_KEY=votre_cle_anon_supabase
-VITE_APP_NAME=FooScore Pro
+VITE_APP_NAME=MHBABY
 VITE_APP_VERSION=1.0.0
 ```
 
@@ -135,7 +134,7 @@ src/
 ### Créer un match
 1. Connectez-vous avec votre email
 2. Cliquez sur "Nouveau Match"
-3. Choisissez le mode (1v1, 2v2, 4v4)
+3. Choisissez le mode (1v1, 2v2)
 4. Sélectionnez les joueurs/équipes
 5. Configurez les règles
 6. Commencez à jouer !
@@ -236,4 +235,4 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
 ---
 
-**FooScore Pro** - Transformez vos parties de baby-foot en compétitions épiques ! 🏆⚽
+**MHBABY** - Transformez vos parties de baby-foot en compétitions épiques ! 🏆⚽

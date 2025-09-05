@@ -28,10 +28,10 @@ export default function Home() {
       >
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Baby-foot Championship
+            Championnat de Baby-foot
           </h1>
           <p className="text-xl text-white/90 mb-8 max-w-md">
-            Challenge your friends, track your progress, and become the ultimate champion!
+            Défiez vos amis, suivez vos progrès et devenez le champion ultime !
           </p>
           
           {user ? (
@@ -39,7 +39,6 @@ export default function Home() {
               variant="hero" 
               size="xl"
               onClick={() => navigate('/match/new')}
-              className="animate-pulse"
             >
               <Play className="mr-2 h-5 w-5" />
               Commencer un Match
@@ -49,7 +48,6 @@ export default function Home() {
               variant="hero" 
               size="xl"
               onClick={() => navigate('/auth')}
-              className="animate-pulse"
             >
               <Play className="mr-2 h-5 w-5" />
               Se Connecter pour Jouer
@@ -65,7 +63,7 @@ export default function Home() {
             <CardContent className="p-4 text-center">
               <Target className="h-8 w-8 mx-auto mb-2 text-primary" />
               <div className="text-2xl font-bold text-primary">{stats.totalMatches}</div>
-              <div className="text-sm text-muted-foreground">Total Matches</div>
+              <div className="text-sm text-muted-foreground">Total Matchs</div>
             </CardContent>
           </Card>
 
@@ -73,7 +71,7 @@ export default function Home() {
             <CardContent className="p-4 text-center">
               <Play className="h-8 w-8 mx-auto mb-2 text-accent" />
               <div className="text-2xl font-bold text-accent">{stats.todayMatches}</div>
-              <div className="text-sm text-muted-foreground">Today</div>
+              <div className="text-sm text-muted-foreground">Aujourd'hui</div>
             </CardContent>
           </Card>
 
@@ -81,7 +79,7 @@ export default function Home() {
             <CardContent className="p-4 text-center">
               <Users className="h-8 w-8 mx-auto mb-2 text-success" />
               <div className="text-2xl font-bold text-success">{stats.activePlayers}</div>
-              <div className="text-sm text-muted-foreground">Active Players</div>
+              <div className="text-sm text-muted-foreground">Joueurs Actifs</div>
             </CardContent>
           </Card>
 
@@ -89,7 +87,7 @@ export default function Home() {
             <CardContent className="p-4 text-center">
               <Trophy className="h-8 w-8 mx-auto mb-2 text-primary" />
               <div className="text-lg font-bold text-primary">{stats.topPlayer}</div>
-              <div className="text-sm text-muted-foreground">Top Player</div>
+              <div className="text-sm text-muted-foreground">Meilleur Joueur</div>
             </CardContent>
           </Card>
         </div>
@@ -100,7 +98,7 @@ export default function Home() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Play className="mr-2 h-5 w-5 text-primary" />
-                Quick Match
+                Match Rapide
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -112,7 +110,7 @@ export default function Home() {
                   disabled={!user}
                 >
                   <Users className="mr-2 h-4 w-4" />
-                  2 vs 2 Match
+                  Match 2 vs 2
                   <Badge className="ml-2 bg-accent text-accent-foreground">Populaire</Badge>
                 </Button>
                 
@@ -123,7 +121,7 @@ export default function Home() {
                   disabled={!user}
                 >
                   <Target className="mr-2 h-4 w-4" />
-                  1 vs 1 Duel
+                  Duel 1 vs 1
                 </Button>
               </div>
               
@@ -144,14 +142,14 @@ export default function Home() {
             <Card className="shadow-card">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">Match History</h3>
+                  <h3 className="font-semibold">Historique des Matchs</h3>
                   <History className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
-                  View all your matches and track your progress
+                  Consultez tous vos matchs et suivez vos progrès
                 </p>
                 <Button variant="outline" className="w-full" onClick={() => navigate('/history')}>
-                  View History
+                  Voir l'Historique
                 </Button>
               </CardContent>
             </Card>
@@ -159,14 +157,14 @@ export default function Home() {
             <Card className="shadow-card">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">Rankings</h3>
+                  <h3 className="font-semibold">Classements</h3>
                   <Trophy className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Check the leaderboard and your ranking
+                  Consultez le classement et votre position
                 </p>
                 <Button variant="outline" className="w-full" onClick={() => navigate('/rankings')}>
-                  View Rankings
+                  Voir les Classements
                 </Button>
               </CardContent>
             </Card>

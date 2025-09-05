@@ -1,4 +1,4 @@
--- Script de configuration simplifié pour FooScore Pro
+-- Script de configuration simplifié pour MHBABY
 -- À exécuter dans l'éditeur SQL de Supabase
 
 -- Create custom types
