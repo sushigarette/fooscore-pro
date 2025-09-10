@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
+import LiveStream from '@/components/LiveStream'
 import { 
   ArrowLeft, 
   Play, 
@@ -238,8 +239,13 @@ const MatchPlay: React.FC = () => {
           </Card>
         </div>
 
-        {/* Tableau de score */}
+        {/* Live + Tableau de score */}
         <div className="mb-8">
+          {isMatchStarted && (
+            <div className="mb-6">
+              <LiveStream matchId={match.id} currentUserId={user?.id} currentUsername={user?.user_metadata?.username || user?.email || undefined} />
+            </div>
+          )}
           <ScoreBoard 
             match={match} 
             isReadOnly={!canControlMatch || isMatchCompleted || isMatchCancelled}
